@@ -1,0 +1,1103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>DigitalWorld — Large Catalog (Phones / PCs / Headphones / Studios)</title>
+<style>
+  :root{
+    --bg:#000;
+    --card:#0f0f10;
+    --muted:rgba(255,255,255,0.7);
+    --accent:#0ea5a4;
+    --glass: rgba(255,255,255,0.03);
+  }
+  html,body{height:100%;margin:0;background:var(--bg);color:#fff;font-family:Inter,Segoe UI,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1200px;margin:28px auto;padding:20px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+  .brand{font-weight:800;font-size:22px}
+  .subtitle{color:var(--muted);font-size:14px}
+  .tabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+  .tab{background:var(--glass);padding:8px 12px;border-radius:8px;cursor:pointer;border:1px solid rgba(255,255,255,0.03)}
+  .tab.active{background:linear-gradient(90deg,var(--accent),#35e6d8);color:#002;font-weight:700}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+  .input, select{background:#0b0b0b;border:1px solid rgba(255,255,255,0.06);padding:10px;border-radius:8px;color:#fff}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+  
+  /* Card with animations */
+  .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.04);padding:12px;border-radius:10px;display:flex;flex-direction:column;gap:10px;min-height:200px;opacity:0;transform: translateY(20px);transition: all 0.3s ease;}
+  .card.show{opacity:1;transform: translateY(0);}
+  .card:hover{transform: scale(1.03);box-shadow: 0 8px 20px rgba(0,0,0,0.4);}
+  
+  .thumb{height:140px;background:#070707;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px;overflow:hidden}
+  .thumb img{width:100%;height:100%;object-fit:cover;border-radius:8px}
+  
+  .title{font-weight:700}
+  .specs{color:var(--muted);font-size:13px;line-height:1.45}
+  .price{margin-top:auto;font-weight:800;color:var(--accent);font-size:18px}
+  .btn-row{display:flex;gap:8px;margin-top:8px}
+  .btn{padding:8px 10px;border-radius:8px;border:0;cursor:pointer;font-weight:700}
+  .btn.primary{background:var(--accent);color:#002}
+  .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+  footer{color:var(--muted);text-align:center;margin-top:20px;font-size:13px}
+
+  /* modal */
+  .modal-back{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:999;opacity:0;transition: opacity 0.25s ease;pointer-events:none;}
+  .modal-back.show{opacity:1;pointer-events:auto;}
+  .modal{width:90%;max-width:760px;background:var(--card);padding:18px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);transform: scale(0.8);opacity:0;transition: all 0.25s ease;}
+  .modal-back.show .modal{transform: scale(1);opacity:1;}
+  .modal h3{margin:0 0 8px}
+  .modal .row{display:flex;gap:12px;flex-wrap:wrap}
+  .meta{color:var(--muted);font-size:13px}
+  .close{position:absolute;right:18px;top:14px;background:transparent;border:0;color:#fff;font-size:18px;cursor:pointer}
+
+  @media (max-width:640px){
+    .row{flex-direction:column}
+    h1{font-size:20px}
+  }
+  .search-hint{color:var(--muted);font-size:13px;margin-left:auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <div class="brand">DigitALWorlD — Large Catalog</div>
+    <div class="subtitle">Phones • Setup • Headphones • Studios — sample catalog with 12 items each (prices in MAD)</div>
+  </div>
+  <div class="search-hint">Search / filter / click details</div>
+</header>
+
+<div class="tabs" id="tabs"></div>
+
+<div class="controls">
+  <input id="search" class="input" placeholder="Search model, brand, spec..." />
+  <select id="brandFilter" class="input">
+    <option value="">All brands</option>
+  </select>
+  <select id="sort" class="input">
+    <option value="popular">Sort: Popular</option>
+    <option value="price-asc">Price ↑</option>
+    <option value="price-desc">Price ↓</option>
+  </select>
+  <div style="margin-left:auto;color:var(--muted);font-size:14px">Showing <span id="count">0</span> items</div>
+</div>
+
+<div id="grid" class="grid" aria-live="polite"></div>
+
+<footer>© DigitalWorld — Large catalog — prices in MAD — 2025</footer>
+</div>
+
+<!-- modal -->
+<div id="modalBack" class="modal-back" role="dialog" aria-hidden="true">
+  <div class="modal" id="modal">
+    <button class="close" onclick="closeModal()">✕</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script>
+function rnd(min,max){return Math.floor(Math.random()*(max-min+1))+min}
+function choose(arr){return arr[Math.floor(Math.random()*arr.length)]}
+function getImage(category, brand, model){
+  return `https://source.unsplash.com/520x300/?${encodeURIComponent(category+' '+brand+' '+model)}`;
+}
+
+/* Brands and prefixes */
+const brandsPhones = ["Apple","Samsung","Xiaomi","OnePlus","OPPO","Realme","Google","Huawei"];
+const phonesPrefixes = ["iPhone","Galaxy S","Redmi Note","OnePlus","OPPO Find","Realme GT","Pixel","Mate"];
+const brandsSetup = ["Apple","Asus","HP","Dell","Lenovo","Acer","MSI","Gigabyte"];
+const pcTypes = ["Gamer","Office","Ultrabook","Creator","Workstation"];
+const brandsHead = ["Apple","Samsung","Sony","Bose","JBL","Sennheiser","Anker","Beats"];
+const headphonesPrefixes = ["AirPods Pro","Galaxy Buds","WH-1000XM","QuietComfort","Tune","Momentum","Soundcore","Studio"];
+const cities = ["Casablanca","Rabat","Marrakech","Fes","Tangier","Agadir","Oujda","Kenitra"];
+
+/* Generate items */
+function makePhones(n=12){
+  // Your actual phones with local images
+  const phones = [
+    {
+  id: 'phone-1',
+  short: 'Google Realme GT 2021 1',
+  brand: 'Google',
+  model: 'Realme GT 2021 1',
+  category: 'Phones',
+  price: 15116,
+  img: 'images/phones/google_realme-gt-2021-1.jpg',
+  imgFallback: getImage('Phone', 'Google', 'Realme GT 2021 1'),
+  specs: {
+    'Storage': '1024GB',
+    'Display': '6.8" AMOLED',
+    'Camera': '150MP',
+    'Chip': 'Snapdragon 8 Gen 2'
+  }
+},
+
+{
+  id: 'phone-2',
+  short: 'Apple iPhone 2022 2',
+  brand: 'Apple',
+  model: 'iPhone 2022 2',
+  category: 'Phones',
+  price: 8310,
+  img: 'images/phones/apple_iphone-2022-2.jpg',
+  imgFallback: getImage('Phone', 'Apple', 'iPhone 2022 2'),
+  specs: {
+    'Storage': '256GB',
+    'Display': '6.1" OLED',
+    'Camera': '55MP',
+    'Chip': 'A16 Bionic'
+  }
+},
+
+{
+  id: 'phone-3',
+  short: 'Huawei Galaxy S 2023 3',
+  brand: 'Huawei',
+  model: 'Galaxy S 2023 3',
+  category: 'Phones',
+  price: 8063,
+  img: 'images/phones/huawei_galaxy-s-2023-3.jpg',
+  imgFallback: getImage('Phone', 'Huawei', 'Galaxy S 2023 3'),
+  specs: {
+    'Storage': '128GB',
+    'Display': '6.5" OLED',
+    'Camera': '95MP',
+    'Chip': 'Kirin 9000'
+  }
+},
+
+{
+  id: 'phone-4',
+  short: 'OPPO iPhone 2024 4',
+  brand: 'OPPO',
+  model: 'iPhone 2024 4',
+  category: 'Phones',
+  price: 23005,
+  img: 'images/phones/oppo_iphone-2024-4.jpg',
+  imgFallback: getImage('Phone', 'OPPO', 'iPhone 2024 4'),
+  specs: {
+    'Storage': '1024GB',
+    'Display': '6.7" AMOLED',
+    'Camera': '95MP',
+    'Chip': 'Dimensity 9200'
+  }
+},
+
+{
+  id: 'phone-5',
+  short: 'Apple OnePlus 2025 5',
+  brand: 'Apple',
+  model: 'OnePlus 2025 5',
+  category: 'Phones',
+  price: 20299,
+  img: 'images/phones/apple_oneplus-2025-5.jpg',
+  imgFallback: getImage('Phone', 'Apple', 'OnePlus 2025 5'),
+  specs: {
+    'Storage': '512GB',
+    'Display': '6.7" OLED',
+    'Camera': '119MP',
+    'Chip': 'A18 Pro'
+  }
+},
+
+{
+  id: 'phone-6',
+  short: 'Xiaomi Realme GT 2020 6',
+  brand: 'Xiaomi',
+  model: 'Realme GT 2020 6',
+  category: 'Phones',
+  price: 13999,
+  img: 'images/phones/xiaomi_realme-gt-2020-6.jpg',
+  imgFallback: getImage('Phone', 'Xiaomi', 'Realme GT 2020 6'),
+  specs: {
+    'Storage': '256GB',
+    'Display': '6.8" Dynamic AMOLED',
+    'Camera': 'Quad 108MP',
+    'Chip': 'Exynos 2100'
+  }
+},
+{
+  id: 'phone-7',
+  short: 'Realme Realme GT 2021 7',
+  brand: 'Realme',
+  model: 'Realme GT 2021 7',
+  category: 'Phones',
+  price: 8556,
+  img: 'images/phones/realme_realme-gt-2021-7.jpg',
+  imgFallback: getImage('Phone', 'Realme', 'Realme GT 2021 7'),
+  specs: {
+    'Storage': '256GB',
+    'Display': '6.5" AMOLED',
+    'Camera': '197MP',
+    'Chip': 'Snapdragon 888'
+  }
+},
+
+{
+  id: 'phone-8',
+  short: 'Google Redmi Note 2022 8',
+  brand: 'Google',
+  model: 'Redmi Note 2022 8',
+  category: 'Phones',
+  price: 4060,
+  img: 'images/phones/google_redmi-note-2022-8.jpg',
+  imgFallback: getImage('Phone', 'Google', 'Redmi Note 2022 8'),
+  specs: {
+    'Storage': '256GB',
+    'Display': '6.6" IPS',
+    'Camera': '90MP',
+    'Chip': 'Snapdragon 778G'
+  }
+},
+
+{
+  id: 'phone-9',
+  short: 'Xiaomi Mate 2023 9',
+  brand: 'Xiaomi',
+  model: 'Mate 2023 9',
+  category: 'Phones',
+  price: 18628,
+  img: 'images/phones/xiaomi_mate-2023-9.jpg',
+  imgFallback: getImage('Phone', 'Xiaomi', 'Mate 2023 9'),
+  specs: {
+    'Storage': '256GB',
+    'Display': '6.8" AMOLED',
+    'Camera': '47MP',
+    'Chip': 'Snapdragon 8+ Gen 1'
+  }
+},
+
+{
+  id: 'phone-10',
+  short: 'Realme Realme GT 2024 10',
+  brand: 'Realme',
+  model: 'Realme GT 2024 10',
+  category: 'Phones',
+  price: 4571,
+  img: 'images/phones/realme_realme-gt-2024-10.jpg',
+  imgFallback: getImage('Phone', 'Realme', 'Realme GT 2024 10'),
+  specs: {
+    'Storage': '256GB',
+    'Display': '6.7" AMOLED',
+    'Camera': '180MP',
+    'Chip': 'Snapdragon 8 Gen 3'
+  }
+},
+
+{
+  id: 'phone-11',
+  short: 'OPPO Realme GT 2025 11',
+  brand: 'OPPO',
+  model: 'Realme GT 2025 11',
+  category: 'Phones',
+  price: 9743,
+  img: 'images/phones/oppo_realme-gt-2025-11.jpg',
+  imgFallback: getImage('Phone', 'OPPO', 'Realme GT 2025 11'),
+  specs: {
+    'Storage': '256GB',
+    'Display': '6.8" AMOLED',
+    'Camera': '115MP',
+    'Chip': 'Dimensity 10000'
+  }
+},
+
+{
+  id: 'phone-12',
+  short: 'Google OPPO Find 2020 12',
+  brand: 'Google',
+  model: 'OPPO Find 2020 12',
+  category: 'Phones',
+  price: 6698,
+  img: 'images/phones/google_oppo-find-2020-12.jpg',
+  imgFallback: getImage('Phone', 'Google', 'OPPO Find 2020 12'),
+  specs: {
+    'Storage': '64GB',
+    'Display': '6.5" OLED',
+    'Camera': '163MP',
+    'Chip': 'Snapdragon 870'
+  }
+}
+  
+];
+  return phones;
+}
+
+function makeSetup(n=12){
+  const setups=[
+  {
+  id: 'setup-1',
+  short: 'Cyberpunk Neon Rig',
+  brand: 'cyberpunk',
+  model: 'neon-rig',
+  category: 'Setup',
+  price: 46000,
+  img: 'images/setup/cyberpunk_neon_rig.jpg',
+  imgFallback: getImage('Setup', 'Cyberpunk', 'Neon Rig'),
+  specs: {
+    'CPU': 'Ryzen 9 7900X',
+    'RAM': '32GB DDR5',
+    'Storage': '1TB NVMe SSD',
+    'GPU': 'GeForce RTX 4080',
+    'Screen': '27" QHD 165Hz'
+  }
+},
+{
+  id: 'setup-2',
+  short: 'Steampunk Gearworks',
+  brand: 'steampunk',
+  model: 'gearworks',
+  category: 'Setup',
+  price: 42000,
+  img: 'images/setup/steampunk_gearworks.jpg',
+  imgFallback: getImage('Setup', 'Steampunk', 'Gearworks'),
+  specs: {
+    'CPU': 'Core i7-13700K',
+    'RAM': '32GB DDR4',
+    'Storage': '1TB NVMe SSD',
+    'GPU': 'GeForce RTX 4070',
+    'Screen': '27" QHD 144Hz'
+  }
+},
+{
+  id: 'setup-3',
+  short: 'Cozy Pixel Den',
+  brand: 'cozy',
+  model: 'pixel-den',
+  category: 'Setup',
+  price: 28000,
+  img: 'images/setup/cozy_pixel_den.jpg',
+  imgFallback: getImage('Setup', 'Cozy', 'Pixel Den'),
+  specs: {
+    'CPU': 'Ryzen 5 7600',
+    'RAM': '16GB DDR5',
+    'Storage': '1TB SSD',
+    'GPU': 'GeForce RTX 4060',
+    'Screen': '24" FHD 144Hz'
+  }
+},
+{
+  id: 'setup-4',
+  short: 'Rainbow RGB Chaos',
+  brand: 'rainbow',
+  model: 'rgb-chaos',
+  category: 'Setup',
+  price: 40000,
+  img: 'images/setup/rainbow_rgb_chaos.jpg',
+  imgFallback: getImage('Setup', 'Rainbow', 'RGB Chaos'),
+  specs: {
+    'CPU': 'Core i7-13700F',
+    'RAM': '32GB DDR5',
+    'Storage': '1TB NVMe SSD',
+    'GPU': 'GeForce RTX 4070 Ti',
+    'Screen': '27" QHD 165Hz'
+  }
+},
+{
+  id: 'setup-5',
+  short: 'Minimalist Battlestation',
+  brand: 'minimalist',
+  model: 'battlestation',
+  category: 'Setup',
+  price: 35000,
+  img: 'images/setup/minimalist_battlestation.jpg',
+  imgFallback: getImage('Setup', 'Minimalist', 'Battlestation'),
+  specs: {
+    'CPU': 'Ryzen 7 7800X3D',
+    'RAM': '32GB DDR5',
+    'Storage': '1TB NVMe SSD',
+    'GPU': 'GeForce RTX 4070',
+    'Screen': '27" QHD 144Hz'
+  }
+},
+{
+  id: 'setup-6',
+  short: 'Boba Fett Bounty Hub',
+  brand: 'boba-fett',
+  model: 'bounty-hub',
+  category: 'Setup',
+  price: 38000,
+  img: 'images/setup/boba_fett_bounty_hub.jpg',
+  imgFallback: getImage('Setup', 'Boba Fett', 'Bounty Hub'),
+  specs: {
+    'CPU': 'Core i7-13700K',
+    'RAM': '32GB DDR5',
+    'Storage': '1TB NVMe SSD',
+    'GPU': 'GeForce RTX 4070 Super',
+    'Screen': '27" QHD 165Hz'
+  }
+},
+{
+  id: 'setup-7',
+  short: 'Purple Galore Zone',
+  brand: 'purple',
+  model: 'galore-zone',
+  category: 'Setup',
+  price: 32000,
+  img: 'images/setup/purple_galore_zone.jpg',
+  imgFallback: getImage('Setup', 'Purple', 'Galore Zone'),
+  specs: {
+    'CPU': 'Ryzen 7 7700',
+    'RAM': '32GB DDR5',
+    'Storage': '1TB SSD',
+    'GPU': 'Radeon RX 7800 XT',
+    'Screen': '27" QHD 144Hz'
+  }
+},
+{
+  id: 'setup-8',
+  short: 'Ocean Depths Command',
+  brand: 'ocean',
+  model: 'depths-command',
+  category: 'Setup',
+  price: 34000,
+  img: 'images/setup/ocean_depths_command.jpg',
+  imgFallback: getImage('Setup', 'Ocean', 'Depths Command'),
+  specs: {
+    'CPU': 'Core i5-13600K',
+    'RAM': '32GB DDR5',
+    'Storage': '1TB NVMe SSD',
+    'GPU': 'GeForce RTX 4070',
+    'Screen': '27" QHD 144Hz'
+  }
+},
+{
+  id: 'setup-9',
+  short: 'Maximalist Gear Galaxy',
+  brand: 'maximalist',
+  model: 'gear-galaxy',
+  category: 'Setup',
+  price: 52000,
+  img: 'images/setup/maximalist_gear_galaxy.jpg',
+  imgFallback: getImage('Setup', 'Maximalist', 'Gear Galaxy'),
+  specs: {
+    'CPU': 'Ryzen 9 7950X',
+    'RAM': '64GB DDR5',
+    'Storage': '2TB NVMe SSD',
+    'GPU': 'GeForce RTX 4090',
+    'Screen': '32" 4K 144Hz'
+  }
+},
+{
+  id: 'setup-10',
+  short: 'Kawaii Pastel Fortress',
+  brand: 'kawaii',
+  model: 'pastel-fortress',
+  category: 'Setup',
+  price: 30000,
+  img: 'images/setup/kawaii_pastel_fortress.jpg',
+  imgFallback: getImage('Setup', 'Kawaii', 'Pastel Fortress'),
+  specs: {
+    'CPU': 'Ryzen 5 7600',
+    'RAM': '16GB DDR5',
+    'Storage': '1TB SSD',
+    'GPU': 'GeForce RTX 4060 Ti',
+    'Screen': '27" FHD 165Hz'
+  }
+},
+{
+  id: 'setup-11',
+  short: 'Monochrome Shadow Setup',
+  brand: 'monochrome',
+  model: 'shadow-setup',
+  category: 'Setup',
+  price: 33000,
+  img: 'images/setup/monochrome_shadow_setup.jpg',
+  imgFallback: getImage('Setup', 'Monochrome', 'Shadow Setup'),
+  specs: {
+    'CPU': 'Core i7-13700',
+    'RAM': '32GB DDR4',
+    'Storage': '1TB NVMe SSD',
+    'GPU': 'GeForce RTX 4070',
+    'Screen': '27" QHD 165Hz'
+  }
+},
+{
+  id: 'setup-12',
+  short: 'Star Wars Imperial Desk',
+  brand: 'imperial',
+  model: 'desk',
+  category: 'Setup',
+  price: 39000,
+  img: 'images/setup/star_wars_imperial_desk.jpg',
+  imgFallback: getImage('Setup', 'Star Wars', 'Imperial Desk'),
+  specs: {
+    'CPU': 'Core i7-13700K',
+    'RAM': '32GB DDR5',
+    'Storage': '1TB NVMe SSD',
+    'GPU': 'GeForce RTX 4070 Super',
+    'Screen': '27" QHD 165Hz'
+  }
+}
+  ];
+  return setups;
+}
+
+function makeHeadphones(n=12){
+  const list=[
+   {
+      id: 'head-1',
+      short: 'Anker AirPods Pro 1',
+      brand: 'anker',
+      model: 'airpods-pro-1',
+      category: 'Headphones',
+      price: 5420, // MAD
+      img: 'images/headphones/anker_airpods_pro_1.jpg',
+      imgFallback: getImage('Headphones', 'Anker', 'AirPods Pro 1'),
+      specs: {
+        'Type': 'True Wireless',
+        'Battery': '8 hrs',
+        'Connectivity': 'Bluetooth 5.2'
+      }
+    },
+    {
+      id: 'head-2',
+      short: 'JBL Studio 2',
+      brand: 'jbl',
+      model: 'studio-2',
+      category: 'Headphones',
+      price: 3116,
+      img: 'images/headphones/jbl_studio_2.jpg',
+      imgFallback: getImage('Headphones', 'JBL', 'Studio 2'),
+      specs: {
+        'Type': 'In-Ear',
+        'Battery': '14 hrs',
+        'Connectivity': 'Bluetooth 5.3'
+      }
+    },
+    {
+      id: 'head-3',
+      short: 'Apple Tune 3',
+      brand: 'apple',
+      model: 'tune-3',
+      category: 'Headphones',
+      price: 4109,
+      img: 'images/headphones/apple_tune_3.jpg',
+      imgFallback: getImage('Headphones', 'Apple', 'Tune 3'),
+      specs: {
+        'Type': 'In-Ear',
+        'Battery': '17 hrs',
+        'Connectivity': 'Bluetooth 5.3'
+      }
+    },
+    {
+      id: 'head-4',
+      short: 'Beats Galaxy Buds 4',
+      brand: 'beats',
+      model: 'galaxy-buds-4',
+      category: 'Headphones',
+      price: 4409,
+      img: 'images/headphones/beats_galaxy_buds_4.jpg',
+      imgFallback: getImage('Headphones', 'Beats', 'Galaxy Buds 4'),
+      specs: {
+        'Type': 'True Wireless',
+        'Battery': '12 hrs',
+        'Connectivity': 'USB-C'
+      }
+    },
+    {
+      id: 'head-5',
+      short: 'Bose Studio 5',
+      brand: 'bose',
+      model: 'studio-5',
+      category: 'Headphones',
+      price: 3133,
+      img: 'images/headphones/bose_studio_5.jpg',
+      imgFallback: getImage('Headphones', 'Bose', 'Studio 5'),
+      specs: {
+        'Type': 'Over-Ear',
+        'Battery': '12 hrs',
+        'Connectivity': 'Bluetooth 5.2'
+      }
+    },
+    {
+      id: 'head-6',
+      short: 'Samsung AirPods Pro 6',
+      brand: 'samsung',
+      model: 'airpods-pro-6',
+      category: 'Headphones',
+      price: 3791,
+      img: 'images/headphones/samsung_airpods_pro_6.jpg',
+      imgFallback: getImage('Headphones', 'Samsung', 'AirPods Pro 6'),
+      specs: {
+        'Type': 'True Wireless',
+        'Battery': '15 hrs',
+        'Connectivity': 'Wired'
+      }
+    },
+    {
+      id: 'head-7',
+      short: 'Anker QuietComfort 7',
+      brand: 'anker',
+      model: 'quietcomfort-7',
+      category: 'Headphones',
+      price: 2309,
+      img: 'images/headphones/anker_quietcomfort_7.jpg',
+      imgFallback: getImage('Headphones', 'Anker', 'QuietComfort 7'),
+      specs: {
+        'Type': 'Over-Ear',
+        'Battery': '19 hrs',
+        'Connectivity': 'Wired'
+      }
+    },
+    {
+      id: 'head-8',
+      short: 'Apple Studio 8',
+      brand: 'apple',
+      model: 'studio-8',
+      category: 'Headphones',
+      price: 6742,
+      img: 'images/headphones/apple_studio_8.jpg',
+      imgFallback: getImage('Headphones', 'Apple', 'Studio 8'),
+      specs: {
+        'Type': 'In-Ear',
+        'Battery': '23 hrs',
+        'Connectivity': 'Bluetooth 5.3'
+      }
+    },
+    {
+      id: 'head-9',
+      short: 'Sennheiser Studio 9',
+      brand: 'sennheiser',
+      model: 'studio-9',
+      category: 'Headphones',
+      price: 3639,
+      img: 'images/headphones/sennheiser_studio_9.jpg',
+      imgFallback: getImage('Headphones', 'Sennheiser', 'Studio 9'),
+      specs: {
+        'Type': 'True Wireless',
+        'Battery': '21 hrs',
+        'Connectivity': 'Bluetooth 5.2'
+      }
+    },
+    {
+      id: 'head-10',
+      short: 'Beats AirPods Pro 10',
+      brand: 'beats',
+      model: 'airpods-pro-10',
+      category: 'Headphones',
+      price: 4817,
+      img: 'images/headphones/beats_airpods_pro_10.jpg',
+      imgFallback: getImage('Headphones', 'Beats', 'AirPods Pro 10'),
+      specs: {
+        'Type': 'Over-Ear',
+        'Battery': '16 hrs',
+        'Connectivity': 'Bluetooth 5.2'
+      }
+    },
+    {
+      id: 'head-11',
+      short: 'Apple Momentum 11',
+      brand: 'apple',
+      model: 'momentum-11',
+      category: 'Headphones',
+      price: 6672,
+      img: 'images/headphones/apple_momentum_11.jpg',
+      imgFallback: getImage('Headphones', 'Apple', 'Momentum 11'),
+      specs: {
+        'Type': 'Over-Ear',
+        'Battery': '22 hrs',
+        'Connectivity': 'Bluetooth 5.2'
+      }
+    },
+    {
+      id: 'head-12',
+      short: 'Sennheiser AirPods Pro 12',
+      brand: 'sennheiser',
+      model: 'airpods-pro-12',
+      category: 'Headphones',
+      price: 4154,
+      img: 'images/headphones/sennheiser_airpods_pro_12.jpg',
+      imgFallback: getImage('Headphones', 'Sennheiser', 'AirPods Pro 12'),
+      specs: {
+        'Type': 'Noise Cancelling',
+        'Battery': '28 hrs',
+        'Connectivity': 'Bluetooth 5.3'
+      }
+    }
+    ];
+  return list;
+}
+
+function makeStudios(n=12){
+  const studios=[
+ {
+  id: 'studio-1',
+  short: 'Studio Agadir #1',
+  brand: 'Studio',
+  model: 'Agadir',
+  category: 'Studios',
+  price: 437,
+  img: 'images/studios/studio_agadir_1.jpg',
+  imgFallback: getImage('Studio', 'Studio', 'Agadir 1'),
+  specs: {
+    'Location': 'Agadir, Morocco',
+    'Size': '54 m²',
+    'Capacity': '3 people',
+    'Features': 'Acoustic treatment, Control room'
+  },
+  currency: 'MAD / hr'
+},
+{
+  id: 'studio-2',
+  short: 'Studio Tangier #2',
+  brand: 'Studio',
+  model: 'Tangier',
+  category: 'Studios',
+  price: 720,
+  img: 'images/studios/studio_tangier_2.jpg',
+  imgFallback: getImage('Studio', 'Studio', 'Tangier 2'),
+  specs: {
+    'Location': 'Tangier, Morocco',
+    'Size': '65 m²',
+    'Capacity': '2 people',
+    'Features': 'Vocal booth, Mixing desk'
+  },
+  currency: 'MAD / hr'
+},
+{
+  id: 'studio-3',
+  short: 'Studio Oujda #3',
+  brand: 'Studio',
+  model: 'Oujda',
+  category: 'Studios',
+  price: 238,
+  img: 'images/studios/studio_oujda_3.jpg',
+  imgFallback: getImage('Studio', 'Studio', 'Oujda 3'),
+  specs: {
+    'Location': 'Oujda, Morocco',
+    'Size': '19 m²',
+    'Capacity': '1 people',
+    'Features': 'Podcast setup, Basic treatment'
+  },
+  currency: 'MAD / hr'
+},
+{
+  id: 'studio-4',
+  short: 'Studio Tangier #4',
+  brand: 'Studio',
+  model: 'Tangier',
+  category: 'Studios',
+  price: 185,
+  img: 'images/studios/studio_tangier_4.jpg',
+  imgFallback: getImage('Studio', 'Studio', 'Tangier 4'),
+  specs: {
+    'Location': 'Casablanca, Morocco',
+    'Size': '81 m²',
+    'Capacity': '1 people',
+    'Features': 'DJ booth, Monitoring'
+  },
+  currency: 'MAD / hr'
+},
+{
+  id: 'studio-5',
+  short: 'Studio Tangier #5',
+  brand: 'Studio',
+  model: 'Tangier',
+  category: 'Studios',
+  price: 567,
+  img: 'images/studios/studio_tangier_5.jpg',
+  imgFallback: getImage('Studio', 'Studio', 'Tangier 5'),
+  specs: {
+    'Location': 'Rabat, Morocco',
+    'Size': '45 m²',
+    'Capacity': '2 people',
+    'Features': 'Small live room, Monitoring'
+  },
+  currency: 'MAD / hr'
+},
+{
+  id: 'studio-6',
+  short: 'Studio Kenitra #6',
+  brand: 'Studio',
+  model: 'Kenitra',
+  category: 'Studios',
+  price: 1062,
+  img: 'images/studios/studio_kenitra_6.jpg',
+  imgFallback: getImage('Studio', 'Studio', 'Kenitra 6'),
+  specs: {
+    'Location': 'Kenitra, Morocco',
+    'Size': '75 m²',
+    'Capacity': '3 people',
+    'Features': 'Control room, Live room'
+  },
+  currency: 'MAD / hr'
+},
+{
+  id: 'studio-7',
+  short: 'Studio Kenitra #7',
+  brand: 'Studio',
+  model: 'Kenitra',
+  category: 'Studios',
+  price: 855,
+  img: 'images/studios/studio_kenitra_7.jpg',
+  imgFallback: getImage('Studio', 'Studio', 'Kenitra 7'),
+  specs: {
+    'Location': 'Kenitra, Morocco',
+    'Size': '118 m²',
+    'Capacity': '2 people',
+    'Features': 'Large live room, Isolation booth'
+  },
+  currency: 'MAD / hr'
+},
+{
+  id: 'studio-8',
+  short: 'Studio Marrakech #8',
+  brand: 'Studio',
+  model: 'Marrakech',
+  category: 'Studios',
+  price: 1088,
+  img: 'images/studios/studio_marrakech_8.jpg',
+  imgFallback: getImage('Studio', 'Studio', 'Marrakech 8'),
+  specs: {
+    'Location': 'Marrakech, Morocco',
+    'Size': '28 m²',
+    'Capacity': '3 people',
+    'Features': 'Vocal booth, Producer desk'
+  },
+  currency: 'MAD / hr'
+},
+{
+  id: 'studio-9',
+  short: 'Studio Oujda #9',
+  brand: 'Studio',
+  model: 'Oujda',
+  category: 'Studios',
+  price: 661,
+  img: 'images/studios/studio_oujda_9.jpg',
+  imgFallback: getImage('Studio', 'Studio', 'Oujda 9'),
+  specs: {
+    'Location': 'Casablanca, Morocco',
+    'Size': '39 m²',
+    'Capacity': '4 people',
+    'Features': 'Rehearsal space, Basic recording'
+  },
+  currency: 'MAD / hr'
+},
+{
+  id: 'studio-10',
+  short: 'Studio Rabat #10',
+  brand: 'Studio',
+  model: 'Rabat',
+  category: 'Studios',
+  price: 215,
+  img: 'images/studios/studio_rabat_10.jpg',
+  imgFallback: getImage('Studio', 'Studio', 'Rabat 10'),
+  specs: {
+    'Location': 'Rabat, Morocco',
+    'Size': '57 m²',
+    'Capacity': '2 people',
+    'Features': 'Control room, Vocal corner'
+  },
+  currency: 'MAD / hr'
+},
+{
+  id: 'studio-11',
+  short: 'Studio Fes #11',
+  brand: 'Studio',
+  model: 'Fes',
+  category: 'Studios',
+  price: 847,
+  img: 'images/studios/studio_fes_11.jpg',
+  imgFallback: getImage('Studio', 'Studio', 'Fes 11'),
+  specs: {
+    'Location': 'Fes, Morocco',
+    'Size': '82 m²',
+    'Capacity': '2 people',
+    'Features': 'Live room, Control room'
+  },
+  currency: 'MAD / hr'
+},
+{
+  id: 'studio-12',
+  short: 'Studio Casablanca #12',
+  brand: 'Studio',
+  model: 'Casablanca',
+  category: 'Studios',
+  price: 436,
+  img: 'images/studios/studio_casablanca_12.jpg',
+  imgFallback: getImage('Studio', 'Studio', 'Casablanca 12'),
+  specs: {
+    'Location': 'Casablanca, Morocco',
+    'Size': '47 m²',
+    'Capacity': '3 people',
+    'Features': 'Acoustic treatment, Monitoring'
+  },
+  currency: 'MAD / hr'
+}
+];
+  return studios ;
+}
+
+/* Generate catalog */
+const categories = {Phones: makePhones(), Setup: makeSetup(), Headphones: makeHeadphones(), Studios: makeStudios()}
+
+/* UI */
+const tabsEl = document.getElementById('tabs'), grid = document.getElementById('grid'), searchInput = document.getElementById('search'), brandFilter = document.getElementById('brandFilter'), sortSelect = document.getElementById('sort'), countEl = document.getElementById('count')
+const catNames = Object.keys(categories), activeCategory = {val:'Phones'}, allBrands = []
+
+// Tabs
+catNames.forEach((c,i)=>{
+  const t=document.createElement('div')
+  t.className='tab'+(i===0?' active':'')
+  t.innerText=c
+  t.onclick=()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'))
+    t.classList.add('active')
+    activeCategory.val=c
+    renderGrid()
+  }
+  tabsEl.appendChild(t)
+})
+
+// Brand filter
+function collectBrands(){
+  const set = new Set()
+  Object.values(categories).flat().forEach(item=>{if(item.brand)set.add(item.brand)})
+  allBrands.splice(0)
+  allBrands.push(...Array.from(set).sort())
+  brandFilter.innerHTML='<option value="">All brands</option>'+allBrands.map(b=>`<option value="${b}">${b}</option>`).join('')
+}
+collectBrands()
+
+function formatPrice(p,currency){return currency&&currency.includes('/ hr')?`${p} ${currency}`:`${p.toLocaleString('fr-FR')} ${currency||'MAD'}`}
+
+function createCard(item) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    
+    // Create thumbnail with loading state
+    const thumb = document.createElement('div');
+    thumb.className = 'thumb';
+    
+    const img = document.createElement('img');
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    img.alt = item.short;
+    
+    // Try to load local image first, fallback to Unsplash
+    const localImg = new Image();
+    localImg.onload = function() {
+        img.src = this.src;
+        thumb.classList.add('loaded');
+    };
+    localImg.onerror = function() {
+        img.src = item.imgFallback || getImage(item.category, item.brand, item.model);
+        thumb.classList.add('loaded');
+    };
+    localImg.src = item.img;
+    
+    thumb.appendChild(img);
+    
+    // Rest of the card content
+    const title = document.createElement('div');
+    title.className = 'title';
+    title.innerText = item.short;
+    
+    const specs = document.createElement('div');
+    specs.className = 'specs';
+    if (item.specs && typeof item.specs === 'object') {
+        specs.innerHTML = Object.keys(item.specs)
+            .slice(0, 3)
+            .map(k => `<strong>${k}:</strong> ${item.specs[k]}`)
+            .join(' • ');
+    }
+    
+    const price = document.createElement('div');
+    price.className = 'price';
+    price.innerText = formatPrice(item.price, item.currency);
+    
+    // Buttons
+    const btnRow = document.createElement('div');
+    btnRow.className = 'btn-row';
+    
+    const detailsBtn = document.createElement('button');
+    detailsBtn.className = 'btn ghost';
+    detailsBtn.innerText = 'Details';
+    detailsBtn.onclick = () => openModal(item);
+    
+    const buyBtn = document.createElement('button');
+    buyBtn.className = 'btn primary';
+    buyBtn.innerText = item.category === 'Studios' ? 'Book' : 'Buy';
+    buyBtn.onclick = () => goToOrder(item);
+    
+    // Assemble the card
+    btnRow.appendChild(detailsBtn);
+    btnRow.appendChild(buyBtn);
+    
+    card.appendChild(thumb);
+    card.appendChild(title);
+    card.appendChild(specs);
+    card.appendChild(price);
+    card.appendChild(btnRow);
+    
+    return card;
+}
+
+function renderGrid(){
+  grid.innerHTML=''
+  let list=categories[activeCategory.val].slice()
+  const q=(searchInput.value||'').trim().toLowerCase()
+  const brand=brandFilter.value
+  list=list.filter(it=>(!brand||it.brand===brand)&&((it.short+' '+Object.values(it.specs).join(' ')).toLowerCase().includes(q)||!q))
+  const sort=sortSelect.value
+  if(sort==='price-asc')list.sort((a,b)=>a.price-b.price)
+  if(sort==='price-desc')list.sort((a,b)=>b.price-a.price)
+  list.forEach((item,index)=>{
+    const card=createCard(item)
+    grid.appendChild(card)
+    setTimeout(()=>card.classList.add('show'),index*50)
+  })
+  countEl.innerText=list.length
+}
+
+/* Modal */
+const modalBack=document.getElementById('modalBack'), modalContent=document.getElementById('modalContent')
+function openModal(item){
+  const html=[]
+  html.push(`<div style="display:flex;gap:14px;align-items:flex-start">`)
+  html.push(`<div style="flex:1"><img src="${item.img}" alt="" style="width:100%;border-radius:8px;object-fit:cover"></div>`)
+  html.push(`<div style="flex:1.4">`)
+  html.push(`<h3>${item.short}</h3>`)
+  html.push(`<div class="meta"><strong>Brand:</strong> ${item.brand || '—'}</div>`)
+  html.push(`<div class="meta"><strong>Category:</strong> ${item.category}</div>`)
+  html.push(`<div style="margin-top:8px"><strong>Price:</strong> ${formatPrice(item.price, item.currency)}</div>`)
+  html.push(`<div style="margin:10px 0"><strong>Specifications:</strong></div>`)
+  html.push(`<ul>${Object.entries(item.specs).map(([k,v])=>`<li><strong>${k}:</strong> ${v}</li>`).join('')}</ul>`)
+  if(item.category==='Studios'){html.push(`<div style="margin-top:10px"><strong>Booking info:</strong> Price per hour (MAD). Location: ${item.specs.Location}</div>`)}
+  html.push(`<div style="margin-top:12px"><button class="btn primary" onclick='goToOrder(${JSON.stringify(item).replace(/'/g,"\\'")})'>Proceed</button></div>`)
+  html.push(`</div></div>`)
+  modalContent.innerHTML=html.join('')
+  modalBack.classList.add('show'); modalBack.setAttribute('aria-hidden','false')
+}
+function closeModal(){modalBack.classList.remove('show'); modalBack.setAttribute('aria-hidden','true')}
+
+function goToOrder(item){
+  const orderHtml=[]
+  orderHtml.push(`<h3>Order / Booking — ${item.short}</h3>`)
+  orderHtml.push(`<div class="row"><div style="flex:1"><label>Name</label><input id="o_name" style="width:100%;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);background:#0b0b0b;color:#fff" /></div><div style="width:160px"><label>Qty / hours</label><input id="o_qty" type="number" min="1" value="1" style="width:100%;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);background:#0b0b0b;color:#fff" /></div></div>`)
+  orderHtml.push(`<div style="margin-top:10px"><label>Email</label><input id="o_email" style="width:100%;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);background:#0b0b0b;color:#fff" /></div>`)
+  orderHtml.push(`<div style="margin-top:12px"><strong>Total:</strong> <span id="o_total">${formatPrice(item.price, item.currency)}</span></div>`)
+  orderHtml.push(`<div style="margin-top:12px"><button class="btn primary" id="confirmBtn">Confirm</button> <button class="btn ghost" onclick="closeModal()">Cancel</button></div>`)
+  modalContent.innerHTML=orderHtml.join('')
+  modalBack.classList.add('show'); modalBack.setAttribute('aria-hidden','false')
+  const qtyInput=document.getElementById('o_qty'), totalSpan=document.getElementById('o_total')
+  function updateOrderTotal(){totalSpan.innerText=formatPrice(item.price*Math.max(1,parseInt(qtyInput.value)||1),item.currency)}
+  qtyInput.oninput=updateOrderTotal
+  document.getElementById('confirmBtn').onclick=()=>{
+    const name=document.getElementById('o_name').value.trim(), email=document.getElementById('o_email').value.trim()
+    const q=Math.max(1,parseInt(qtyInput.value)||1)
+    if(!name||!email){alert('Fill name and email');return}
+    modalContent.innerHTML=`<h3>Thank you, ${name}!</h3><p>Your request for <strong>${q} x ${item.short}</strong> has been recorded. Total: <strong>${formatPrice(item.price*q,item.currency)}</strong>.</p><p>We (DigitalMarket demo) will contact you at <strong>${email}</strong> to finalize.</p><div style="margin-top:12px"><button class="btn primary" onclick="closeModal()">Close</button></div>`
+  }
+}
+
+modalBack.addEventListener('click',(e)=>{if(e.target===modalBack)closeModal()})
+searchInput.oninput=renderGrid
+brandFilter.onchange=renderGrid
+sortSelect.onchange=renderGrid
+renderGrid()
+window.DigitalCatalog={categories,renderGrid,openModal}
+</script>
+</body>
+</html>

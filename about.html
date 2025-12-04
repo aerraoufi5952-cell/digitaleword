@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>About Us - Digital World</title>
+  <link rel="stylesheet" href="style.css">
+
+  <style>
+    :root{
+      --bg: #000;
+      --text: #fff;
+      --accent: #0ea5a4;
+      --muted: rgba(255,255,255,0.75);
+    }
+
+    html, body{
+      margin:0;
+      height:100%;
+      background:var(--bg);
+      color:var(--text);
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    }
+
+    /* Smooth fade */
+    .site{
+      opacity:0;
+      animation: fadeIn 1.2s ease forwards;
+    }
+
+    @keyframes fadeIn {
+      from { opacity:0; transform: translateY(10px); }
+      to { opacity:1; transform: translateY(0); }
+    }
+
+    header{
+      text-align:center;
+      padding:36px 20px 10px;
+    }
+
+    .brand{
+      font-size:28px;
+      font-weight:700;
+      margin:0;
+      letter-spacing:0.4px;
+    }
+
+    .tag{
+      color:var(--muted);
+      font-size:14px;
+      margin-top:6px;
+    }
+
+    main{
+      max-width:1000px;
+      margin:30px auto;
+      padding:20px;
+      box-sizing:border-box;
+    }
+
+    .hero{
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015));
+      border:1px solid rgba(255,255,255,0.05);
+      padding:24px;
+      border-radius:8px;
+      box-shadow:0 8px 30px rgba(0,0,0,0.6);
+      animation: fadeUp 1.3s ease forwards;
+    }
+
+    @keyframes fadeUp {
+      from { opacity:0; transform: translateY(20px); }
+      to { opacity:1; transform: translateY(0); }
+    }
+
+    .hero h1{
+      margin:0 0 12px 0;
+      font-size:26px;
+    }
+
+    .hero p{
+      color:var(--muted);
+      line-height:1.5;
+      margin:0 0 18px 0;
+    }
+
+    .features{
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+      gap:14px;
+      margin-top:20px;
+    }
+
+    .card{
+      background:rgba(255,255,255,0.02);
+      border:1px solid rgba(255,255,255,0.04);
+      padding:14px;
+      border-radius:8px;
+      transform: translateY(10px);
+      opacity:0;
+      animation: cardFade 0.8s ease forwards;
+    }
+
+    .card:nth-child(1){ animation-delay:0.2s; }
+    .card:nth-child(2){ animation-delay:0.35s; }
+    .card:nth-child(3){ animation-delay:0.5s; }
+
+    @keyframes cardFade {
+      from { opacity:0; transform: translateY(12px); }
+      to { opacity:1; transform: translateY(0); }
+    }
+
+    .card h3{
+      margin:0 0 8px 0;
+      font-size:16px;
+      color:var(--text);
+    }
+
+    .card p{
+      margin:0;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.5;
+    }
+
+    footer{
+      text-align:center;
+      padding:18px;
+      color:var(--muted);
+      border-top:1px solid rgba(255,255,255,0.04);
+      margin-top:auto;
+    }
+
+    @media (max-width:480px){
+      .brand{font-size:22px;}
+      .hero h1{font-size:20px;}
+    }
+  </style>
+</head>
+
+<body>
+  <header class="site-header">
+    <a href="index.html" class="logo">
+      Digit<span>AL</span>Worl<span>D</span>
+    </a>
+    <nav>
+      <ul class="nav-menu">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="Categories.html">Categories</a></li>
+        <li><a href="about.html" class="active">About Us</a></li>
+        <li><a href="contact.html">Contact Us</a></li>
+      </ul>
+    </nav>
+  </header>
+  
+  <main class="main-content">
+
+    <main>
+      <section class="hero">
+        <strong><h1>Welcome to Your <font color="#0ea5a4">DigitALWorlD Store</font></h1></strong>
+        <p>
+          Welcome to <strong>DigitALWorlD</strong>, your platform dedicated to buying 100% digital products.
+          At DigitalWorld, we carefully select high-quality smartphones and headphones to meet your needs, whether you’re a casual user, a gamer, or an audiophile. Our gaming setups are crafted for performance and style, tailored to deliver an immersive experience.
+          Beyond products, We offer a selection of fully equipped studio spaces designed to suit a wide range of projects and budgets. Whether you're producing content, streaming, or recording, you can find the perfect studio for your needs. Each studio has its own hourly rate, so please refer to the studio listings for detailed pricing information.
+        </p>
+        <div class="features">
+          <div class="card">
+            <h3>Instant Download</h3>
+            <p>Access your files immediately after purchase — no waiting time.</p>
+          </div>
+
+          <div class="card">
+            <h3>Regular Updates</h3>
+            <p>Our products receive frequent updates to stay relevant and optimized.</p>
+          </div>
+
+          <div class="card">
+            <h3>Secure Payments</h3>
+            <p>Safe checkout process and a clear refund policy for full peace of mind.</p>
+          </div>
+        </div>
+
+      </section>
+  </main>
+
+  <footer class="site-footer">
+    © DigitALWorlD — All rights reserved — 2025
+  </footer>
+</body>
+</html>
